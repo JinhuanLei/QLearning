@@ -74,6 +74,8 @@ def evaluateQTable(q_table, start_position, maze):
             new_position = getNewPosition(cur_position, action, q_table)
             reward = getReward(new_position, maze)
             rewards += reward
+            # if reward == -100:
+            #     print()
             cur_position = new_position
             steps += 1
             life = isContinue(new_position, maze, steps)
@@ -125,7 +127,7 @@ def isContinue(cur_position, maze, steps):
         # print("Reach The Goal")
         return False
     # is too mant steps?
-    elif steps == (len(maze) * len(maze[0])):
+    elif steps >= (len(maze) * len(maze[0])):
         return False
     else:
         return True
