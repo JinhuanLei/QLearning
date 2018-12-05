@@ -5,7 +5,7 @@ import sys
 import numpy
 
 ROOT = os.path.dirname(__file__)
-
+rewards_list = []
 
 def getInputs():
     filename = "pipe_world.txt"
@@ -45,21 +45,50 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness):
             learning_rate = updateLearnRate(learning_rate, episode)
         if episode % 200 == 0:
             policy_randomness = updatePolicyRandomness(policy_randomness, episode)
+        if episode % 50 == 0:
+            evaluateQTable(q_table, start_position, maze)
         steps = 0
         while life:
             action = predictAction(cur_position, q_table)
             # Observe next state
             new_position = getNewPosition(cur_position, action, q_table)
             reward = getReward(new_position, maze)
-            updateQValue(cur_position,new_position, action, q_table, learning_rate, policy_randomness, reward)
+            updateQValue(cur_position, new_position, action, q_table, learning_rate, policy_randomness, reward)
             cur_position = new_position
             steps += 1
-            life = isContinue(new_position,maze, steps)
+            life = isContinue(new_position, maze, steps)
+
+
+def evaluateQTable(q_table, start_position, maze):
+    total_rewards = 0
+    for episode in range(50):
+        life = True
+        cur_position = []
+        cur_position.append(start_position[0])
+        cur_position.append(start_position[1])
+        steps = 0
+        rewards = 0
+        while life:
+            action = predictAction(cur_position, q_table)
+            # Observe next state
+            new_position = getNewPosition(cur_position, action, q_table)
+            reward = getReward(new_position, maze)
+            rewards += reward
+            cur_position = new_position
+            steps += 1
+            life = isContinue(new_position, maze, steps)
+        total_rewards += rewards
+    average_rewards = total_rewards / 50
+    rewards_list.append(average_rewards)
+    print(average_rewards)
 
 
 
+def drawResult():
+    pass
 
-def updateQValue(cur_position,new_position, action, q_table, learning_rate, policy_randomness, reward):
+
+def updateQValue(cur_position, new_position, action, q_table, learning_rate, policy_randomness, reward):
     q_value = q_table[cur_position[0]][cur_position[1]][action]
     actions = q_table[new_position[0]][new_position[1]]
     max_qvalue = findMax(actions)
@@ -93,13 +122,13 @@ def isContinue(cur_position, maze, steps):
         return False
     # is reach the goal?
     elif maze[cur_position[0]][cur_position[1]] == "G":
+        # print("Reach The Goal")
         return False
     # is too mant steps?
     elif steps == (len(maze) * len(maze[0])):
         return False
     else:
         return True
-
 
 
 def getReward(cur_position, maze):
