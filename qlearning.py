@@ -1,11 +1,12 @@
 import os
 import random
 import sys
-
-import numpy
+import numpy as np
+import math
 
 ROOT = os.path.dirname(__file__)
 rewards_list = []
+
 
 def getInputs():
     filename = "pipe_world.txt"
@@ -29,12 +30,12 @@ def getInputs():
                     start_position.append(temp)
                 temp += 1
             count += 1
-    Q_Learning(maze, start_position, 0.9, 0.9)
+    Q_Learning(maze, start_position, 0.9, 0.9, 0.9)
 
 
-def Q_Learning(maze, start_position, learning_rate, policy_randomness):
+def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_discount):
     # 0 up 1 down 2 left 3 right
-    q_table = numpy.zeros([len(maze), len(maze[0]), 4])
+    q_table = np.zeros([len(maze), len(maze[0]), 4])
     initTable(q_table)
     for episode in range(1, 10001):
         life = True
@@ -49,14 +50,35 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness):
             evaluateQTable(q_table, start_position, maze)
         steps = 0
         while life:
-            action = predictAction(cur_position, q_table)
+            action = 0
+            if np.random.uniform() < policy_randomness:
+                action = randomAction(cur_position, q_table)
+            else:
+                action = predictAction(cur_position, q_table)
             # Observe next state
             new_position = getNewPosition(cur_position, action, q_table)
             reward = getReward(new_position, maze)
-            updateQValue(cur_position, new_position, action, q_table, learning_rate, policy_randomness, reward)
+            # print(cur_position)
+            updateQValue(cur_position, new_position, action, q_table, learning_rate, future_discount, reward)
             cur_position = new_position
             steps += 1
             life = isContinue(new_position, maze, steps)
+
+
+
+def randomAction(cur_position, q_table):
+    x = cur_position[0]
+    y = cur_position[1]
+    actions = q_table[x][y]
+    list = []
+    for i in range(0, len(actions)):
+        a = actions[i]
+        if a is None or math.isnan(a):
+            continue
+        list.append(i)
+    result = random.randint(0, len(list) - 1)
+    return list[result]
+
 
 
 def evaluateQTable(q_table, start_position, maze):
@@ -74,8 +96,6 @@ def evaluateQTable(q_table, start_position, maze):
             new_position = getNewPosition(cur_position, action, q_table)
             reward = getReward(new_position, maze)
             rewards += reward
-            # if reward == -100:
-            #     print()
             cur_position = new_position
             steps += 1
             life = isContinue(new_position, maze, steps)
@@ -85,16 +105,17 @@ def evaluateQTable(q_table, start_position, maze):
     print(average_rewards)
 
 
-
 def drawResult():
     pass
 
 
-def updateQValue(cur_position, new_position, action, q_table, learning_rate, policy_randomness, reward):
+def updateQValue(cur_position, new_position, action, q_table, learning_rate, future_discount, reward):
+    # print(cur_position)
+    # print(action)
     q_value = q_table[cur_position[0]][cur_position[1]][action]
     actions = q_table[new_position[0]][new_position[1]]
     max_qvalue = findMax(actions)
-    q_value = q_value + learning_rate * (reward + policy_randomness * max_qvalue - q_value)
+    q_value = q_value + learning_rate * (reward + future_discount * max_qvalue - q_value)
     q_table[cur_position[0]][cur_position[1]][action] = q_value
 
 
@@ -151,7 +172,7 @@ def getNewPosition(cur_position, action, q_table):  # probally have issues
         new_position[0] = cur_position[0] - 1
         if predictSlip():
             # Go Down and Up , need to consider left and right border
-            if isYBounded(cur_position[1], q_table):
+            if isYBounded(new_position[1], q_table):
                 new_position[1] = cur_position[1] + 1 if cur_position[1] == 0 else cur_position[1] - 1
             else:
                 if random.randint(0, 1) == 1:
@@ -162,7 +183,7 @@ def getNewPosition(cur_position, action, q_table):  # probally have issues
         new_position[0] = cur_position[0] + 1
         if predictSlip():
             # Go Down and Up , need to consider left and right border
-            if isYBounded(cur_position[1], q_table):
+            if isYBounded(new_position[1], q_table):
                 new_position[1] = cur_position[1] + 1 if cur_position[1] == 0 else cur_position[1] - 1
             else:
                 if random.randint(0, 1) == 1:
@@ -173,7 +194,7 @@ def getNewPosition(cur_position, action, q_table):  # probally have issues
         # Go left and right, need to consider up and bottom border
         new_position[1] = cur_position[1] - 1
         if predictSlip():
-            if isXBounded(cur_position[0], q_table):
+            if isXBounded(new_position[0], q_table):
                 new_position[0] = cur_position[0] + 1 if cur_position[0] == 0 else cur_position[0] - 1
             else:
                 if random.randint(0, 1) == 1:
@@ -183,7 +204,7 @@ def getNewPosition(cur_position, action, q_table):  # probally have issues
     elif action == 3:
         new_position[1] = cur_position[1] + 1
         if predictSlip():
-            if isXBounded(cur_position[0], q_table):
+            if isXBounded(new_position[0], q_table):
                 new_position[0] = cur_position[0] + 1 if cur_position[0] == 0 else cur_position[0] - 1
             else:
                 if random.randint(0, 1) == 1:
