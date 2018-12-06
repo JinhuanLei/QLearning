@@ -35,8 +35,10 @@ def getInputs():
 
 def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_discount):
     # 0 up 1 down 2 left 3 right
+    # I did not update q_table in this algorithm, I just use it to judge explosive area
     q_table = np.zeros([len(maze), len(maze[0]), 4])
     initTable(q_table)
+    weight = [0, 0]
     for episode in range(1, 10001):
         life = True
         cur_position = []
@@ -54,7 +56,7 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_di
             if np.random.uniform() < policy_randomness:
                 action = randomAction(cur_position, q_table)
             else:
-                action = predictAction(cur_position, q_table)
+                action = predictAction(cur_position, q_table, weight, maze)
             # Observe next state
             new_position = getNewPosition(cur_position, action, q_table)
             reward = getReward(new_position, maze)
@@ -64,6 +66,70 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_di
             steps += 1
             life = isContinue(new_position, maze, steps)
 
+
+def getF1(position, maze, action):
+    md_plus = getMDPlus(maze)
+    new_position = [position[0], position[1]]
+    move(new_position, action)
+    md_val = calculateManhattanDistance(position, new_position)
+    return md_val / md_plus
+
+
+def move(new_position, action):
+    if action == 0:
+        new_position[0] = new_position[0] - 1
+    elif action == 1:
+        new_position[0] = new_position[0] + 1
+    elif action == 2:
+        new_position[1] = new_position[1] - 1
+    elif action == 3:
+        new_position[1] = new_position[1] + 1
+
+
+def getF2(position,action):
+    left_inverse_distance = 1 / position[0]
+    right_inverse_distance = 1 / position[1]
+    if action <= 1:
+        return min(left_inverse_distance, right_inverse_distance)
+    elif action == 2:
+        return left_inverse_distance
+    elif action == 3:
+        return right_inverse_distance
+
+
+def getFeatureVector(position, action, maze):
+    feature_vector = []
+    feature_vector.append(getF1(position, maze, action))
+    feature_vector.append(getF2(position, maze, action))
+    return feature_vector
+
+
+def getMDPlus(maze):
+    goal_position = getGoalPosition(maze)
+    left_up = [0, 0]
+    right_up = [0, len(maze[0]) - 1]
+    left_down = [len(maze) - 1, 0]
+    right_down = [len(maze) - 1, len(maze[0]) - 1]
+    list = []
+    list.append(calculateManhattanDistance(left_up, goal_position))
+    list.append(calculateManhattanDistance(left_down, goal_position))
+    list.append(calculateManhattanDistance(right_down, goal_position))
+    list.append(calculateManhattanDistance(right_up, goal_position))
+    return max(list)
+
+
+def calculateManhattanDistance(position1, position2):
+    return abs(position1[0] - position2[0]) + abs(position1[1] - position2[1])
+
+
+def getGoalPosition(maze):
+    position = [0, 0]
+    for x in range(len(maze)):
+        for y in range(len(maze[x])):
+            if maze[x][y] == "G":
+                position[0] = x
+                position[1] = y
+    return position
 
 
 def randomAction(cur_position, q_table):
@@ -78,7 +144,6 @@ def randomAction(cur_position, q_table):
         list.append(i)
     result = random.randint(0, len(list) - 1)
     return list[result]
-
 
 
 def evaluateQTable(q_table, start_position, maze):
@@ -103,10 +168,6 @@ def evaluateQTable(q_table, start_position, maze):
     average_rewards = total_rewards / 50
     rewards_list.append(average_rewards)
     print(average_rewards)
-
-
-def drawResult():
-    pass
 
 
 def updateQValue(cur_position, new_position, action, q_table, learning_rate, future_discount, reward):
@@ -241,32 +302,32 @@ def initTable(q_table):
                 q_table[x][y][2] = None
             if y == (len(q_table[0]) - 1):
                 q_table[x][y][3] = None
+    # for x in range(len(q_table)):
+    #     for y in range(len(q_table[0])):
+    #         for z in range(len(q_table[x][y][0])):
+    #             if q_table[x][y][z] is None:
+    #                 continue
+    #             action = z
+    #             position = [x,y]
 
 
-def predictAction(cur_position, q_table):
-    zero_actions = []
+def predictAction(cur_position, q_table, weight, maze):
     x = cur_position[0]
     y = cur_position[1]
-    # if(x)
     actions = q_table[x][y]
-    maxVal = -sys.maxsize - 1
-    maxAction = 0
+    max_qvalue = -sys.maxsize - 1
+    max_action = 0
     index = 0
     for a in actions:
         if a is None:
             continue
-        if a > maxVal:
-            maxVal = a
-            maxAction = index
-        if a == 0:
-            zero_actions.append(index)
+        feature_vector = getFeatureVector(cur_position, index, maze, q_table)
+        q_value = feature_vector[0] * weight[0] + feature_vector[1] * weight[1]
+        if q_value > max_qvalue:
+            max_qvalue = q_value
+            max_action = index
         index += 1
-    if len(zero_actions) == 0:
-        return maxAction
-    else:
-        # random choose an action
-        action = random.randint(0, len(zero_actions) - 1)
-        return zero_actions[action]
+    return max_action
 
 
 def predictSlip():
