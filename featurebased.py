@@ -35,6 +35,7 @@ def getInputs():
 def featurebased_Q_Learning(maze, start_position, learning_rate, policy_randomness, future_discount):
     feature_table = np.zeros([len(maze), len(maze[0]), 4, 2])
     initFeatureTable(feature_table, maze)
+    print(feature_table)
 
 
 def initFeatureTable(feature_table, maze):
@@ -54,7 +55,11 @@ def initFeatureTable(feature_table, maze):
     for x in range(len(feature_table)):  # row
         for y in range(len(feature_table[0])):  # column
             actions = []
+            # state in the Mine
+            if y == 0 or y == (len(feature_table[0]) - 1):
+                continue
             for z in range(len(feature_table[0][0])):  # four actions
+                # invalid action
                 if isNan(feature_table[x][y][z][0]):
                     continue
                 # Append its index(action) rather than value
@@ -62,6 +67,8 @@ def initFeatureTable(feature_table, maze):
             for action in actions:
                 position = [x, y]
                 feature_vector = calculateFeatureVector(position, action, maze, md_plus)
+                feature_table[x][y][action][0] = feature_vector[0]
+                feature_table[x][y][action][1] = feature_vector[1]
 
 
 def calculateFeatureVector(position, action, maze, md_plus):
@@ -70,9 +77,17 @@ def calculateFeatureVector(position, action, maze, md_plus):
     move(new_position, action)
     md_moved = calculateManhattanDistance(new_position, goal_position)
     f1 = md_moved / md_plus
-
-
-
+    # calculate f2
+    f2 = 0
+    left_inverse_distance = 1 / position[1]
+    right_inverse_distance = 1 / (len(maze[0]) - 1 - position[1])
+    if action <= 1:
+        f2 = min(left_inverse_distance, right_inverse_distance)
+    elif action == 2:
+        f2 = left_inverse_distance
+    elif action == 3:
+        f2 = right_inverse_distance
+    return [f1, f2]
 
 
 def move(new_position, action):
@@ -84,7 +99,6 @@ def move(new_position, action):
         new_position[1] = new_position[1] - 1
     elif action == 3:
         new_position[1] = new_position[1] + 1
-
 
 
 def getMDPlus(maze):
