@@ -1,8 +1,8 @@
+import math
 import os
 import random
 import sys
 import numpy as np
-import math
 
 ROOT = os.path.dirname(__file__)
 rewards_list = []
@@ -61,17 +61,22 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_di
             new_position = getNewPosition(cur_position, action, q_table)
             reward = getReward(new_position, maze)
             # print(cur_position)
-            updateQValue(cur_position, new_position, action, q_table, learning_rate, future_discount, reward)
+            updateWeight(cur_position, new_position, action, q_table, learning_rate, future_discount, reward, weight,
+                         maze)
             cur_position = new_position
             steps += 1
             life = isContinue(new_position, maze, steps)
 
 
+def updateWeight(cur_position, new_position, action, q_table, learning_rate, future_discount, reward, weight, maze):
+    feature_vector = getFeatureVector(cur_position, action, maze)
+    q_value = feature_vector[0] * weight[0] + feature_vector[1] * weight[1]
+
+
+
 def getF1(position, maze, action):
     md_plus = getMDPlus(maze)
-    new_position = [position[0], position[1]]
-    move(new_position, action)
-    md_val = calculateManhattanDistance(position, new_position)
+    md_val = calculateManhattanDistance(position, getGoalPosition(maze))
     return md_val / md_plus
 
 
@@ -86,7 +91,7 @@ def move(new_position, action):
         new_position[1] = new_position[1] + 1
 
 
-def getF2(position,action):
+def getF2(position, action):
     left_inverse_distance = 1 / position[0]
     right_inverse_distance = 1 / position[1]
     if action <= 1:
@@ -99,8 +104,10 @@ def getF2(position,action):
 
 def getFeatureVector(position, action, maze):
     feature_vector = []
-    feature_vector.append(getF1(position, maze, action))
-    feature_vector.append(getF2(position,action))
+    new_position = [position[0], position[1]]
+    move(new_position, action)
+    feature_vector.append(getF1(new_position, maze, action))
+    feature_vector.append(getF2(position, action))
     return feature_vector
 
 
@@ -168,16 +175,6 @@ def evaluateQTable(q_table, start_position, maze):
     average_rewards = total_rewards / 50
     rewards_list.append(average_rewards)
     print(average_rewards)
-
-
-def updateQValue(cur_position, new_position, action, q_table, learning_rate, future_discount, reward):
-    # print(cur_position)
-    # print(action)
-    q_value = q_table[cur_position[0]][cur_position[1]][action]
-    actions = q_table[new_position[0]][new_position[1]]
-    max_qvalue = findMax(actions)
-    q_value = q_value + learning_rate * (reward + future_discount * max_qvalue - q_value)
-    q_table[cur_position[0]][cur_position[1]][action] = q_value
 
 
 def findMax(actions):
