@@ -1,8 +1,9 @@
 import math
 import os
 import random
-import numpy as np
 import sys
+
+import numpy as np
 
 ROOT = os.path.dirname(__file__)
 rewards_list = []
@@ -30,10 +31,10 @@ def getInputs():
                     start_position.append(temp)
                 temp += 1
             count += 1
-    featurebased_Q_Learning(maze, start_position, 0.9, 0.9, 0.9)
+    feature_based_Q_Learning(maze, start_position, 0.9, 0.9, 0.9)
 
 
-def featurebased_Q_Learning(maze, start_position, learning_rate, policy_randomness, future_discount):
+def feature_based_Q_Learning(maze, start_position, learning_rate, policy_randomness, future_discount):
     feature_table = np.zeros([len(maze), len(maze[0]), 4, 2])
     initFeatureTable(feature_table, maze)
     weight = [0, 0]
@@ -44,15 +45,108 @@ def featurebased_Q_Learning(maze, start_position, learning_rate, policy_randomne
             learning_rate = updateLearnRate(learning_rate, episode)
         if episode % 200 == 0:
             policy_randomness = updatePolicyRandomness(policy_randomness, episode)
-        if episode % 50 == 0:
+        if episode % 100 == 0:
             # evaluate the policy
-            pass
+            evaluate(maze, start_position, feature_table, weight)
+        steps = 0
         while life:
             action = 0
             if np.random.uniform() < policy_randomness:
                 action = randomAction(cur_position, feature_table)
             else:
                 action = predictAction(cur_position, feature_table, weight, maze)
+            new_position = getNewPosition(cur_position, action, feature_table)
+            reward = getReward(new_position, maze)
+            updateWeight(cur_position, new_position, action, feature_table, weight, reward, learning_rate,
+                         future_discount)
+            cur_position = new_position
+            steps += 1
+            life = isContinue(new_position, maze, steps)
+
+
+def evaluate(maze, start_position, feature_table, weight):
+    pass
+
+
+def updateWeight(cur_position, new_position, action, feature_table, weight, reward, learning_rate, future_discount):
+    cur_feature_vector = feature_table[cur_position[0]][cur_position[1]][action]
+    cur_qvalue = cur_feature_vector[0] * weight[0] + cur_feature_vector[1] * weight[1]
+    # calculate the max qvalue of new position
+    max_qvalue = getMaxQValue(new_position, feature_table, weight)
+    val = (reward + future_discount * max_qvalue - cur_qvalue) * learning_rate
+    cur_feature_vector[0] *= val
+    cur_feature_vector[1] *= val
+    weight[0] += cur_feature_vector[0]
+    weight[1] += cur_feature_vector[1]
+
+
+def getMaxQValue(new_position, feature_table, weight):
+    qvalue_list = feature_table[new_position[0]][new_position[1]]
+    dict = {}
+    for i in range(len(qvalue_list)):
+        if isNan(qvalue_list[i][0]):
+            continue
+        dict[i] = qvalue_list[i]
+    max_index = 0
+    max_qvalue = -sys.maxsize - 1
+    for key in dict:
+        vector = dict[key]
+        q_value = vector[0] * weight[0] + vector[1] * weight[0]
+        if q_value > max_qvalue:
+            max_qvalue = q_value
+            max_action = int(key)
+    return max_qvalue
+
+
+def getNewPosition(cur_position, action, feature_table):  # probally have issues
+    # Sliper
+    new_position = [0, 0]
+    new_position[0] = cur_position[0]
+    new_position[1] = cur_position[1]
+    if action == 0:
+        new_position[0] = cur_position[0] - 1
+        if predictSlip():
+            # Go Down and Up , need to consider left and right border
+            if isYBounded(new_position[1], feature_table):
+                new_position[1] = cur_position[1] + 1 if cur_position[1] == 0 else cur_position[1] - 1
+            else:
+                if random.randint(0, 1) == 1:
+                    new_position[1] = cur_position[1] + 1
+                else:
+                    new_position[1] = cur_position[1] - 1
+    elif action == 1:
+        new_position[0] = cur_position[0] + 1
+        if predictSlip():
+            # Go Down and Up , need to consider left and right border
+            if isYBounded(new_position[1], feature_table):
+                new_position[1] = cur_position[1] + 1 if cur_position[1] == 0 else cur_position[1] - 1
+            else:
+                if random.randint(0, 1) == 1:
+                    new_position[1] = cur_position[1] + 1
+                else:
+                    new_position[1] = cur_position[1] - 1
+    elif action == 2:
+        # Go left and right, need to consider up and bottom border
+        new_position[1] = cur_position[1] - 1
+        if predictSlip():
+            if isXBounded(new_position[0], feature_table):
+                new_position[0] = cur_position[0] + 1 if cur_position[0] == 0 else cur_position[0] - 1
+            else:
+                if random.randint(0, 1) == 1:
+                    new_position[0] = cur_position[0] + 1
+                else:
+                    new_position[0] = cur_position[0] - 1
+    elif action == 3:
+        new_position[1] = cur_position[1] + 1
+        if predictSlip():
+            if isXBounded(new_position[0], feature_table):
+                new_position[0] = cur_position[0] + 1 if cur_position[0] == 0 else cur_position[0] - 1
+            else:
+                if random.randint(0, 1) == 1:
+                    new_position[0] = cur_position[0] + 1
+                else:
+                    new_position[0] = cur_position[0] - 1
+    return new_position
 
 
 def randomAction(cur_position, feature_table):
@@ -85,7 +179,6 @@ def predictAction(cur_position, feature_table, weight, maze):
             max_qvalue = q_value
             max_action = int(key)
     return max_action
-
 
 
 def initFeatureTable(feature_table, maze):
@@ -165,6 +258,14 @@ def getMDPlus(maze):
     return max(list)
 
 
+def predictSlip():
+    slip = random.randint(0, 9)
+    if slip < 8:
+        return False
+    else:
+        return True
+
+
 def getGoalPosition(maze):
     position = [0, 0]
     for x in range(len(maze)):
@@ -189,6 +290,48 @@ def updatePolicyRandomness(policy_randomness, episode):
 
 def updateLearnRate(learning_rate, episode):
     return learning_rate / ((episode / 1000) + 1)
+
+
+# left right border
+def isYBounded(position, feature_table):
+    if (position == 0) or (position == (len(feature_table[0]) - 1)):
+        return True
+    else:
+        return False
+
+
+# up bottom border
+def isXBounded(position, feature_table):
+    if (position == 0) or (position == (len(feature_table) - 1)):
+        return True
+    else:
+        return False
+
+
+def getReward(cur_position, maze):
+    if maze[cur_position[0]][cur_position[1]] == "M":
+        return -100
+    elif maze[cur_position[0]][cur_position[1]] == "G":
+        return 0
+    else:
+        return -1
+
+
+def isContinue(cur_position, maze, steps):
+    # Three Conditions
+    # into Mine
+    # is Alive?
+    if maze[cur_position[0]][cur_position[1]] == "M":
+        return False
+    # is reach the goal?
+    elif maze[cur_position[0]][cur_position[1]] == "G":
+        # print("Reach The Goal")
+        return False
+    # is too mant steps?
+    elif steps >= (len(maze) * len(maze[0])):
+        return False
+    else:
+        return True
 
 
 if __name__ == "__main__":

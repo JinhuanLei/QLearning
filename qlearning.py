@@ -46,7 +46,7 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_di
             learning_rate = updateLearnRate(learning_rate, episode)
         if episode % 200 == 0:
             policy_randomness = updatePolicyRandomness(policy_randomness, episode)
-        if episode % 50 == 0:
+        if episode % 100 == 0:
             evaluateQTable(q_table, start_position, maze)
         steps = 0
         while life:
