@@ -100,7 +100,7 @@ def getF2(position,action):
 def getFeatureVector(position, action, maze):
     feature_vector = []
     feature_vector.append(getF1(position, maze, action))
-    feature_vector.append(getF2(position, maze, action))
+    feature_vector.append(getF2(position,action))
     return feature_vector
 
 
@@ -321,7 +321,7 @@ def predictAction(cur_position, q_table, weight, maze):
     for a in actions:
         if a is None:
             continue
-        feature_vector = getFeatureVector(cur_position, index, maze, q_table)
+        feature_vector = getFeatureVector(cur_position, index, maze)
         q_value = feature_vector[0] * weight[0] + feature_vector[1] * weight[1]
         if q_value > max_qvalue:
             max_qvalue = q_value
