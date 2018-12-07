@@ -1,7 +1,8 @@
 import math
 import os
-
+import random
 import numpy as np
+import sys
 
 ROOT = os.path.dirname(__file__)
 rewards_list = []
@@ -35,7 +36,56 @@ def getInputs():
 def featurebased_Q_Learning(maze, start_position, learning_rate, policy_randomness, future_discount):
     feature_table = np.zeros([len(maze), len(maze[0]), 4, 2])
     initFeatureTable(feature_table, maze)
-    print(feature_table)
+    weight = [0, 0]
+    for episode in range(1, 10001):
+        life = True
+        cur_position = [start_position[0], start_position[1]]
+        if episode % 1000 == 0:
+            learning_rate = updateLearnRate(learning_rate, episode)
+        if episode % 200 == 0:
+            policy_randomness = updatePolicyRandomness(policy_randomness, episode)
+        if episode % 50 == 0:
+            # evaluate the policy
+            pass
+        while life:
+            action = 0
+            if np.random.uniform() < policy_randomness:
+                action = randomAction(cur_position, feature_table)
+            else:
+                action = predictAction(cur_position, feature_table, weight, maze)
+
+
+def randomAction(cur_position, feature_table):
+    x = cur_position[0]
+    y = cur_position[1]
+    list = []
+    for z in range(len(feature_table[x][y])):
+        if isNan(feature_table[x][y][z][0]):
+            continue
+        list.append(z)
+    result = random.randint(0, len(list) - 1)
+    return list[result]
+
+
+def predictAction(cur_position, feature_table, weight, maze):
+    x = cur_position[0]
+    y = cur_position[1]
+    dict = {}
+    for z in range(len(feature_table[x][y])):
+        if isNan(feature_table[x][y][z][0]):
+            continue
+        dict[z] = feature_table[x][y][z]
+    print(dict)
+    max_action = 0
+    max_qvalue = -sys.maxsize - 1
+    for key in dict:
+        vector = dict[key]
+        q_value = vector[0] * weight[0] + vector[1] * weight[0]
+        if q_value > max_qvalue:
+            max_qvalue = q_value
+            max_action = int(key)
+    return max_action
+
 
 
 def initFeatureTable(feature_table, maze):
@@ -131,6 +181,14 @@ def calculateManhattanDistance(position1, position2):
 
 def isNan(val):
     return val is None or math.isnan(val)
+
+
+def updatePolicyRandomness(policy_randomness, episode):
+    return policy_randomness / (episode / 200 + 1)
+
+
+def updateLearnRate(learning_rate, episode):
+    return learning_rate / ((episode / 1000) + 1)
 
 
 if __name__ == "__main__":
