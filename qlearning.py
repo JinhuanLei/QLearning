@@ -1,8 +1,9 @@
+import math
 import os
 import random
 import sys
+
 import numpy as np
-import math
 
 ROOT = os.path.dirname(__file__)
 rewards_list = []
@@ -47,7 +48,7 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_di
         if episode % 200 == 0:
             policy_randomness = updatePolicyRandomness(policy_randomness, episode)
         if episode % 100 == 0:
-            evaluateQTable(q_table, start_position, maze)
+            evaluateQTable(q_table, start_position, maze, 50)
         steps = 0
         while life:
             action = 0
@@ -63,7 +64,39 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_di
             cur_position = new_position
             steps += 1
             life = isContinue(new_position, maze, steps)
+    printMaze(q_table, start_position, maze)
 
+
+def printMaze(q_table, start_position, maze):
+    path = list(maze)
+    life = True
+    steps = 0
+    cur_position = []
+    cur_position.append(start_position[0])
+    cur_position.append(start_position[1])
+    while life:
+        action = predictAction(cur_position, q_table)
+        # Observe next state
+        new_position = getNewPosition(cur_position, action, q_table)
+        path[cur_position[0]][cur_position[1]] = itoa(action)
+        cur_position = new_position
+        steps += 1
+        life = isContinue(new_position, maze, steps)
+    for x in path:
+        for y in x:
+            print(y, end="")
+        print()
+
+
+def itoa(action):
+    if action == 0:
+        return "U"
+    elif action == 1:
+        return "D"
+    elif action == 2:
+        return "L"
+    elif action == 3:
+        return "R"
 
 
 def randomAction(cur_position, q_table):
@@ -80,10 +113,9 @@ def randomAction(cur_position, q_table):
     return list[result]
 
 
-
-def evaluateQTable(q_table, start_position, maze):
+def evaluateQTable(q_table, start_position, maze, runs):
     total_rewards = 0
-    for episode in range(50):
+    for episode in range(runs):
         life = True
         cur_position = []
         cur_position.append(start_position[0])
@@ -105,8 +137,6 @@ def evaluateQTable(q_table, start_position, maze):
     print(average_rewards)
 
 
-def drawResult():
-    pass
 
 
 def updateQValue(cur_position, new_position, action, q_table, learning_rate, future_discount, reward):

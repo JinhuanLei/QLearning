@@ -50,26 +50,51 @@ def feature_based_Q_Learning(maze, start_position, learning_rate, policy_randomn
             evaluate(maze, start_position, feature_table, weight)
         steps = 0
         while life:
-            action = 0
+            action = -1
+            status = "none"
+            dict = {}
             if np.random.uniform() < policy_randomness:
                 action = randomAction(cur_position, feature_table)
+                status = "random"
             else:
-                action = predictAction(cur_position, feature_table, weight, maze)
+                action, dict = predictAction(cur_position, feature_table, weight, maze)
+                status = "predict"
             new_position = getNewPosition(cur_position, action, feature_table)
             reward = getReward(new_position, maze)
             updateWeight(cur_position, new_position, action, feature_table, weight, reward, learning_rate,
                          future_discount)
+            if new_position[0] < 0 or new_position[1] < 0:
+                print("Opss")
             cur_position = new_position
             steps += 1
             life = isContinue(new_position, maze, steps)
 
 
 def evaluate(maze, start_position, feature_table, weight):
-    pass
+    total_rewards = 0
+    for episode in range(50):
+        life = True
+        cur_position = [start_position[0], start_position[1]]
+        steps = 0
+        rewards = 0
+        while life:
+            action = predictAction(cur_position, feature_table, weight, maze)
+            new_position = getNewPosition(cur_position, action, feature_table)
+            reward = getReward(new_position, maze)
+            rewards += reward
+            cur_position = new_position
+            steps += 1
+            life = isContinue(new_position, maze, steps)
+        total_rewards += rewards
+    average_rewards = total_rewards / 50
+    rewards_list.append(average_rewards)
+    print(average_rewards)
+
 
 
 def updateWeight(cur_position, new_position, action, feature_table, weight, reward, learning_rate, future_discount):
-    cur_feature_vector = feature_table[cur_position[0]][cur_position[1]][action]
+    temp_vector = feature_table[cur_position[0]][cur_position[1]][action]
+    cur_feature_vector = [temp_vector[0], temp_vector[1]]
     cur_qvalue = cur_feature_vector[0] * weight[0] + cur_feature_vector[1] * weight[1]
     # calculate the max qvalue of new position
     max_qvalue = getMaxQValue(new_position, feature_table, weight)
@@ -169,8 +194,7 @@ def predictAction(cur_position, feature_table, weight, maze):
         if isNan(feature_table[x][y][z][0]):
             continue
         dict[z] = feature_table[x][y][z]
-    print(dict)
-    max_action = 0
+    max_action = -1
     max_qvalue = -sys.maxsize - 1
     for key in dict:
         vector = dict[key]
@@ -178,7 +202,7 @@ def predictAction(cur_position, feature_table, weight, maze):
         if q_value > max_qvalue:
             max_qvalue = q_value
             max_action = int(key)
-    return max_action
+    return max_action, dict
 
 
 def initFeatureTable(feature_table, maze):
