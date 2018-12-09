@@ -51,14 +51,14 @@ def feature_based_Q_Learning(maze, start_position, learning_rate, policy_randomn
         steps = 0
         while life:
             action = -1
-            status = "none"
-            dict = {}
+            # status = "none"
+            # dict = {}
             if np.random.uniform() < policy_randomness:
                 action = randomAction(cur_position, feature_table)
-                status = "random"
+                # status = "random"
             else:
-                action, dict = predictAction(cur_position, feature_table, weight, maze)
-                status = "predict"
+                action = predictAction(cur_position, feature_table, weight, maze)
+                # status = "predict"
             new_position = getNewPosition(cur_position, action, feature_table)
             reward = getReward(new_position, maze)
             updateWeight(cur_position, new_position, action, feature_table, weight, reward, learning_rate,
@@ -91,8 +91,8 @@ def evaluate(maze, start_position, feature_table, weight):
     print(average_rewards)
 
 
-
 def updateWeight(cur_position, new_position, action, feature_table, weight, reward, learning_rate, future_discount):
+    # cannot change feature_lable
     temp_vector = feature_table[cur_position[0]][cur_position[1]][action]
     cur_feature_vector = [temp_vector[0], temp_vector[1]]
     cur_qvalue = cur_feature_vector[0] * weight[0] + cur_feature_vector[1] * weight[1]
@@ -114,12 +114,14 @@ def getMaxQValue(new_position, feature_table, weight):
         dict[i] = qvalue_list[i]
     max_index = 0
     max_qvalue = -sys.maxsize - 1
+    # if len(dict) < 4:
+    #     print("Opss")
     for key in dict:
         vector = dict[key]
-        q_value = vector[0] * weight[0] + vector[1] * weight[0]
+        q_value = vector[0] * weight[0] + vector[1] * weight[1]
         if q_value > max_qvalue:
             max_qvalue = q_value
-            max_action = int(key)
+            max_index = int(key)
     return max_qvalue
 
 
@@ -198,11 +200,13 @@ def predictAction(cur_position, feature_table, weight, maze):
     max_qvalue = -sys.maxsize - 1
     for key in dict:
         vector = dict[key]
-        q_value = vector[0] * weight[0] + vector[1] * weight[0]
+        q_value = vector[0] * weight[0] + vector[1] * weight[1]
+        if isNan(q_value):
+            print("")
         if q_value > max_qvalue:
             max_qvalue = q_value
             max_action = int(key)
-    return max_action, dict
+    return max_action
 
 
 def initFeatureTable(feature_table, maze):
@@ -223,8 +227,8 @@ def initFeatureTable(feature_table, maze):
         for y in range(len(feature_table[0])):  # column
             actions = []
             # state in the Mine
-            if y == 0 or y == (len(feature_table[0]) - 1):
-                continue
+            # if y == 0 or y == (len(feature_table[0]) - 1):
+            #     continue
             for z in range(len(feature_table[0][0])):  # four actions
                 # invalid action
                 if isNan(feature_table[x][y][z][0]):
@@ -246,8 +250,9 @@ def calculateFeatureVector(position, action, maze, md_plus):
     f1 = md_moved / md_plus
     # calculate f2
     f2 = 0
-    left_inverse_distance = 1 / position[1]
-    right_inverse_distance = 1 / (len(maze[0]) - 1 - position[1])
+    # consider reverse distance is 0
+    left_inverse_distance = 1 / position[1] if position[1] != 0 else 0
+    right_inverse_distance = 1 / (len(maze[0]) - 1 - position[1]) if (len(maze[0]) - 1 - position[1]) != 0 else 0
     if action <= 1:
         f2 = min(left_inverse_distance, right_inverse_distance)
     elif action == 2:
