@@ -2,7 +2,6 @@ import math
 import os
 import random
 import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -78,25 +77,22 @@ def showImage():
     for i in range(len(rewards_list)):
         x_list.append(i * 100)
     plt.figure('Draw')
-    plt.plot(x_list, rewards_list)  # plot绘制折线图
-    plt.draw()  # 显示绘图
-    plt.pause(5)  # 显示5秒
-    plt.show()  # 保存图象
-    plt.close()  # 关闭图表
+    plt.plot(x_list, rewards_list)
+    plt.draw()
+    plt.pause(5)
+    plt.show()
+    plt.close()
 
 
 def printMaze(feature_table, start_position, maze, weight):
     path = list(maze)
-    life = True
-    steps = 0
-    cur_position = [start_position[0], start_position[1]]
-    while life:
-        action = predictAction(cur_position, feature_table, weight, maze)
-        new_position = getNewPosition(cur_position, action, feature_table)
-        path[cur_position[0]][cur_position[1]] = itoa(action)
-        cur_position = new_position
-        steps += 1
-        life = isContinue(new_position, maze, steps)
+    for x in range(len(path)):
+        for y in range(len(path[x])):
+            if path[x][y] == "M":
+                continue
+            cur_position = [x, y]
+            action = predictAction(cur_position, feature_table, weight, maze)
+            path[x][y] = itoa(action)
     for x in path:
         for y in x:
             print(y, end="")
