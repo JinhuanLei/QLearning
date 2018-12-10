@@ -3,6 +3,7 @@ import os
 import random
 import sys
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 ROOT = os.path.dirname(__file__)
@@ -65,6 +66,20 @@ def Q_Learning(maze, start_position, learning_rate, policy_randomness, future_di
             steps += 1
             life = isContinue(new_position, maze, steps)
     printMaze(q_table, start_position, maze)
+    showImage()
+
+
+def showImage():
+    x_list = []
+    for i in range(len(rewards_list)):
+        x_list.append(i * 100)
+    plt.figure('Draw')
+    plt.plot(x_list, rewards_list)  # plot绘制折线图
+    plt.draw()  # 显示绘图
+    plt.pause(5)  # 显示5秒
+    plt.show()  # 保存图象
+    plt.close()  # 关闭图表
+
 
 
 def printMaze(q_table, start_position, maze):
@@ -135,8 +150,6 @@ def evaluateQTable(q_table, start_position, maze, runs):
     average_rewards = total_rewards / 50
     rewards_list.append(average_rewards)
     print(average_rewards)
-
-
 
 
 def updateQValue(cur_position, new_position, action, q_table, learning_rate, future_discount, reward):
