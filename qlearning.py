@@ -74,6 +74,8 @@ def showImage():
     for i in range(len(rewards_list)):
         x_list.append(i * 100)
     plt.figure('Draw')
+    plt.xlabel('Episodes')
+    plt.ylabel('Average Rewards')
     plt.plot(x_list, rewards_list)
     plt.draw()
     plt.pause(10)
